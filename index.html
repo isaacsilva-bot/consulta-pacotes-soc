@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Pacotes com Atraso de Recebimento no SOC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange-50: #fff7ed; --orange-100: #ffedd5; --orange-200: #fed7aa;
+            --orange-300: #fdba74; --orange-400: #fb923c; --orange-500: #f97316;
+            --orange-600: #ea580c; --orange-700: #c2410c; --orange-800: #9a3412;
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.35);
+            --glass-shadow: 0 8px 32px rgba(234, 88, 12, 0.15);
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6a00 25%, #f97316 50%, #ea580c 75%, #c2410c 100%);
+            background-attachment: fixed; color: #1e293b; padding: 20px;
+            position: relative; overflow-x: hidden;
+        }
+        body::before {
+            content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none; z-index: 0;
+        }
+        .container { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+        .header {
+            text-align: center; margin-bottom: 24px; padding: 32px 24px;
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: var(--glass-shadow);
+        }
+        .header .logo-icon { font-size: 48px; margin-bottom: 12px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+        .header h1 { font-size: 1.5rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.15); line-height: 1.3; letter-spacing: -0.02em; }
+        .header p { font-size: 0.85rem; color: rgba(255,255,255,0.85); margin-top: 8px; font-weight: 400; }
+        .search-card {
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 20px; padding: 28px 24px;
+            margin-bottom: 20px; box-shadow: var(--glass-shadow);
+        }
+        .search-card label { display: block; font-size: 0.8rem; font-weight: 600; color: #fff; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+        .search-wrapper { display: flex; gap: 10px; }
+        .search-wrapper input {
+            flex: 1; padding: 14px 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 14px;
+            font-size: 1rem; font-family: 'Inter', sans-serif; font-weight: 500;
+            background: rgba(255,255,255,0.85); color: #1e293b; outline: none; transition: all 0.3s ease;
+        }
+        .search-wrapper input::placeholder { color: #94a3b8; font-weight: 400; }
+        .search-wrapper input:focus { border-color: #fff; background: rgba(255,255,255,0.95); box-shadow: 0 0 0 4px rgba(255,255,255,0.2); }
+        .search-wrapper button {
+            padding: 14px 24px; border: none; border-radius: 14px; font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; transition: all 0.3s ease; font-family: 'Inter', sans-serif;
+            display: flex; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .btn-search { background: linear-gradient(135deg, #fff 0%, #f1f5f9 100%); color: var(--orange-700); box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+        .btn-search:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        .btn-search:active { transform: translateY(0); }
+        .btn-clear { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3) !important; padding: 14px 16px; }
+        .btn-clear:hover { background: rgba(255,255,255,0.25); }
+        .saved-badge { display: none; font-size: 0.72rem; color: rgba(255,255,255,0.8); margin-top: 8px; font-weight: 400; }
+        .saved-badge.show { display: flex; align-items: center; gap: 5px; }
+        .obs-card {
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.5); border-radius: 20px; padding: 24px;
+            margin-bottom: 20px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border-left: 5px solid var(--orange-500);
+        }
+        .obs-card .obs-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .obs-card .obs-header h3 { font-size: 1rem; font-weight: 700; color: var(--orange-700); }
+        .obs-card .obs-icon { font-size: 1.3rem; }
+        .obs-card p, .obs-card li { font-size: 0.82rem; color: #475569; line-height: 1.7; }
+        .obs-card ul { list-style: none; padding: 0; margin-bottom: 16px; }
+        .obs-card ul li { padding-left: 18px; position: relative; margin-bottom: 4px; }
+        .obs-card ul li::before { content: '\2022'; position: absolute; left: 4px; color: var(--orange-500); font-weight: bold; }
+        .obs-card .actions-title { font-size: 0.82rem; font-weight: 700; color: var(--orange-700); margin-bottom: 8px; }
+        .obs-card ol { padding-left: 20px; }
+        .obs-card ol li { margin-bottom: 4px; padding-left: 4px; }
+        .results-section { margin-top: 0; }
+        .results-header {
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 20px; padding: 20px 24px;
+            margin-bottom: 16px; box-shadow: var(--glass-shadow); display: flex; align-items: center; justify-content: space-between;
+        }
+        .results-header h2 { font-size: 1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .results-header .badge { background: rgba(255,255,255,0.25); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
+        .driver-name-tag { font-size: 0.82rem; color: rgba(255,255,255,0.85); font-weight: 400; }
+        .table-container {
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.5); border-radius: 20px; overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06); margin-bottom: 20px;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: linear-gradient(135deg, var(--orange-500), var(--orange-600)); }
+        thead th { padding: 14px 16px; font-size: 0.75rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; text-align: left; }
+        tbody tr { transition: background 0.2s ease; }
+        tbody tr:hover { background: rgba(249, 115, 22, 0.06); }
+        tbody tr:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+        tbody td { padding: 13px 16px; font-size: 0.82rem; color: #334155; font-weight: 400; }
+        tbody td:first-child { font-weight: 600; color: var(--orange-700); }
+        .date-cell { white-space: nowrap; }
+        .status-message {
+            text-align: center; padding: 60px 24px;
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: var(--glass-shadow);
+        }
+        .status-message .status-icon { font-size: 56px; margin-bottom: 16px; }
+        .status-message h3 { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+        .status-message p { font-size: 0.85rem; color: rgba(255,255,255,0.8); max-width: 360px; margin: 0 auto; line-height: 1.6; }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer { text-align: center; padding: 20px; font-size: 0.72rem; color: rgba(255,255,255,0.55); }
+        .data-source-note { font-size: 0.7rem; color: rgba(255,255,255,0.5); text-align: center; margin-top: 8px; }
+        .mobile-cards { display: none; }
+        .mobile-card {
+            background: rgba(255,255,255,0.92); border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 16px; padding: 18px; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        }
+        .mobile-card .mc-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 0; }
+        .mobile-card .mc-row:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+        .mobile-card .mc-label { font-size: 0.7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .mobile-card .mc-value { font-size: 0.82rem; color: #334155; font-weight: 500; text-align: right; max-width: 65%; }
+        .mobile-card .mc-value.highlight { color: var(--orange-700); font-weight: 700; }
+        @media (max-width: 700px) {
+            body { padding: 12px; }
+            .header { padding: 24px 16px; border-radius: 18px; }
+            .header h1 { font-size: 1.2rem; }
+            .search-wrapper { flex-direction: column; }
+            .search-wrapper button { justify-content: center; }
+            .table-container { display: none; }
+            .mobile-cards { display: block; }
+            .results-header { flex-direction: column; gap: 8px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo-icon">&#x1F4E6;</div>
+        <h1>Consulta de Pacotes com Atraso de Recebimento no SOC</h1>
+        <p>Pesquise pelo ID do motorista para consultar os pacotes pendentes</p>
+    </div>
+    <div class="search-card">
+        <label>&#x1F50D; ID do Motorista</label>
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" placeholder="Digite o ID do motorista..." inputmode="numeric" autocomplete="off">
+            <button class="btn-search" onclick="searchDriver()"><span>Buscar</span></button>
+            <button class="btn-clear" onclick="clearSearch()" title="Limpar busca e ID salvo">&#x2715;</button>
+        </div>
+        <div class="saved-badge" id="savedBadge">&#x1F4BE; ID salvo automaticamente</div>
+    </div>
+    <div class="obs-card">
+        <div class="obs-header">
+            <span class="obs-icon">&#x26A0;&#xFE0F;</span>
+            <h3>Observa&#xE7;&#xE3;o</h3>
+        </div>
+        <ul>
+            <li>Pacotes faltantes s&#xE3;o tratados como poss&#xED;veis perdas;</li>
+            <li>A visualiza&#xE7;&#xE3;o dos pacotes perdidos tem por objetivo dar ao motorista a possibilidade de uma a&#xE7;&#xE3;o pr&#xE9;via, evitando descontos indevidos;</li>
+            <li>A atualiza&#xE7;&#xE3;o ser&#xE1; realizada toda quarta e sexta-feira.</li>
+        </ul>
+        <p class="actions-title">Exemplo de a&#xE7;&#xF5;es para evitar descontos:</p>
+        <ol>
+            <li>Visualizar a loja, data e o c&#xF3;digo do pacote;</li>
+            <li>Verificar se algum pacote ficou preso no ba&#xFA;;</li>
+            <li>Verificar com a loja se algum pacote ficou no local de coleta.</li>
+        </ol>
+    </div>
+    <div id="resultsArea">
+        <div class="status-message" id="initialMessage">
+            <div class="status-icon">&#x1F50E;</div>
+            <h3>Pronto para consultar</h3>
+            <p>Digite o ID do motorista acima para visualizar os pacotes com atraso de recebimento.</p>
+        </div>
+    </div>
+    <div class="footer">
+        Consulta de Pacotes com Atraso de Recebimento no SOC &bull; Shopee
+        <div class="data-source-note" id="dataNote"></div>
+    </div>
+</div>
+<script>
+const SPREADSHEET_ID = '1JyiCCsR_tqyLEjk8Aa9HL73B-2-8RaccYv6ZXR-cXBI';
+const SHEET_GID = '569601787';
+let DATA = [];
+let dataLoaded = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    const savedId = localStorage.getItem('driverId');
+    if (savedId) {
+        document.getElementById('searchInput').value = savedId;
+        document.getElementById('savedBadge').classList.add('show');
+    }
+    document.getElementById('searchInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') searchDriver();
+    });
+});
+
+function loadData() {
+    showStatus('&#x23F3;', 'Carregando dados...', 'Buscando informa&#xE7;&#xF5;es atualizadas da planilha...');
+    const query = encodeURIComponent('SELECT J,K,L,M,N WHERE J IS NOT NULL OFFSET 1');
+    const url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID + '/gviz/tq?tqx=out:json&gid=' + SHEET_GID + '&tq=' + query;
+    const script = document.createElement('script');
+    const cbName = 'gvizCb_' + Date.now();
+    window[cbName] = function(response) {
+        try {
+            if (response.status === 'error') throw new Error('Sheet error');
+            DATA = [];
+            const rows = response.table.rows;
+            for (const row of rows) {
+                const c = row.c;
+                if (!c || !c[0]) continue;
+                const dId = c[0] ? String(c[0].v || '').trim() : '';
+                const nm = c[1] ? String(c[1].v || '').trim() : '';
+                const st = c[2] ? String(c[2].v || '').trim() : '';
+                const cd = c[3] ? String(c[3].v || '').trim() : '';
+                let dt = '';
+                if (c[4]) { dt = c[4].f ? c[4].f : String(c[4].v || ''); }
+                if (dId) DATA.push([dId, nm, st, cd, dt]);
+            }
+            dataLoaded = true;
+            document.getElementById('dataNote').textContent = 'Dados atualizados da planilha em tempo real';
+            const savedId = localStorage.getItem('driverId');
+            if (savedId && document.getElementById('searchInput').value === savedId) {
+                searchDriverById(savedId);
+            } else {
+                showStatus('\u{1F50E}', 'Pronto para consultar', 'Digite o ID do motorista acima para visualizar os pacotes com atraso de recebimento.');
+            }
+        } catch(e) { handleLoadError(e); }
+        delete window[cbName];
+        script.remove();
+    };
+    // Use JSONP approach
+    fetch(url).then(r => r.text()).then(text => {
+        const m = text.match(/google\.visualization\.Query\.setResponse\((.*)\);?$/s);
+        if (!m) throw new Error('Parse error');
+        const json = JSON.parse(m[1]);
+        window[cbName](json);
+    }).catch(e => handleLoadError(e));
+}
+
+function handleLoadError(e) {
+    console.error('Load error:', e);
+    dataLoaded = false;
+    showStatus('&#x26A0;&#xFE0F;', 'Erro ao carregar dados', 'N&#xE3;o foi poss&#xED;vel acessar a planilha. Verifique se ela est&#xE1; compartilhada como "Qualquer pessoa com o link pode visualizar".');
+    document.getElementById('dataNote').textContent = 'Erro ao carregar. Verifique o compartilhamento da planilha.';
+}
+
+function searchDriver() {
+    const input = document.getElementById('searchInput');
+    const id = input.value.trim();
+    if (!id) {
+        showStatus('\u{26A0}\u{FE0F}', 'ID n\u00E3o informado', 'Por favor, digite o ID do motorista para realizar a busca.');
+        return;
+    }
+    localStorage.setItem('driverId', id);
+    document.getElementById('savedBadge').classList.add('show');
+    if (!dataLoaded) {
+        showStatus('\u{23F3}', 'Carregando dados...', 'Aguarde enquanto os dados s\u00E3o carregados da planilha.');
+        const check = setInterval(() => { if (dataLoaded) { clearInterval(check); searchDriverById(id); } }, 300);
+        return;
+    }
+    searchDriverById(id);
+}
+
+function searchDriverById(id) {
+    const results = DATA.filter(row => row[0] === id);
+    if (results.length === 0) {
+        showStatus('\u{2705}', 'Nenhum pacote encontrado', 'N\u00E3o foram encontrados pacotes com atraso para o ID ' + id + '. Isso \u00E9 uma boa not\u00EDcia!');
+        return;
+    }
+    showResults(id, results[0][1], results);
+}
+
+function clearSearch() {
+    localStorage.removeItem('driverId');
+    document.getElementById('searchInput').value = '';
+    document.getElementById('savedBadge').classList.remove('show');
+    showStatus('\u{1F50E}', 'Pronto para consultar', 'Digite o ID do motorista acima para visualizar os pacotes com atraso de recebimento.');
+}
+
+function showStatus(icon, title, msg) {
+    document.getElementById('resultsArea').innerHTML =
+        '<div class="status-message"><div class="status-icon">' + icon + '</div><h3>' + title + '</h3><p>' + msg + '</p></div>';
+}
+
+function formatDate(d) {
+    if (!d) return '-';
+    var m2 = d.match(/Date\((\d+),(\d+),(\d+)\)/);
+    if (m2) return String(m2[3]).padStart(2,'0') + '/' + String(parseInt(m2[2])+1).padStart(2,'0') + '/' + m2[1];
+    var p = d.split('-');
+    if (p.length === 3) return p[2] + '/' + p[1] + '/' + p[0];
+    return d;
+}
+
+function esc(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showResults(id, name, results) {
+    var tRows = '', mCards = '';
+    for (var i = 0; i < results.length; i++) {
+        var r = results[i], store = esc(r[2]), code = esc(r[3]), date = formatDate(r[4]);
+        tRows += '<tr><td>' + store + '</td><td style="font-family:monospace;font-size:0.78rem">' + code + '</td><td class="date-cell">' + date + '</td></tr>';
+        mCards += '<div class="mobile-card"><div class="mc-row"><span class="mc-label">Loja</span><span class="mc-value highlight">' + store + '</span></div><div class="mc-row"><span class="mc-label">C\u00F3digo</span><span class="mc-value" style="font-family:monospace;font-size:0.78rem">' + code + '</span></div><div class="mc-row"><span class="mc-label">Data da Coleta</span><span class="mc-value">' + date + '</span></div></div>';
+    }
+    document.getElementById('resultsArea').innerHTML =
+        '<div class="results-header"><div><h2>\u{1F4CB} Pacotes Encontrados</h2><span class="driver-name-tag">Motorista: <strong>' + esc(name) + '</strong> (ID: ' + esc(id) + ')</span></div><span class="badge">' + results.length + ' pacote' + (results.length > 1 ? 's' : '') + '</span></div>' +
+        '<div class="table-container"><table><thead><tr><th>Nome da Loja</th><th>C\u00F3digo do Pacote</th><th>Data da Coleta</th></tr></thead><tbody>' + tRows + '</tbody></table></div>' +
+        '<div class="mobile-cards">' + mCards + '</div>';
+}
+</script>
+</body>
+</html>
